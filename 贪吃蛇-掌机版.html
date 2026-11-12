@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#c9ced4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="贪吃蛇">
+<meta name="format-detection" content="telephone=no">
+<title>贪吃蛇 · 掌机</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23b5c88a'/><rect x='6' y='13' width='5' height='5' fill='%23252f1c'/><rect x='6' y='8' width='5' height='5' fill='%23252f1c'/><rect x='11' y='8' width='5' height='5' fill='%23252f1c'/><rect x='16' y='8' width='5' height='5' fill='%23252f1c'/><rect x='18' y='21' width='5' height='5' fill='%23bf4a2c'/></svg>">
+<style>
+:root{
+  --case:#c9ced4;
+  --case-hi:#e2e6ea;
+  --case-lo:#a9b0b8;
+  --case-line:#878f98;
+  --lcd:#b5c88a;
+  --lcd-shadow:#8fa66b;
+  --ink:#252f1c;
+  --ink-soft:#4c5b3a;
+  --berry:#bf4a2c;
+  --key:#3d454f;
+  --key-hi:#55606c;
+  --key-edge:#262d35;
+  --key-text:#e9edf1;
+  --page:#1c222a;
+  --page-2:#141920;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(120% 80% at 50% 0%, #26303a 0%, var(--page) 45%, var(--page-2) 100%);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;
+  user-select:none;
+  touch-action:none;
+}
+
+/* ===== 机身 ===== */
+.device{
+  position:relative;
+  width:min(430px,100%);
+  height:100vh;
+  height:min(100dvh,900px);
+  max-height:100vh;
+  max-height:100dvh;
+  display:flex;
+  flex-direction:column;
+  padding:calc(10px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(178deg,var(--case-hi) 0%,var(--case) 12%,var(--case) 72%,var(--case-lo) 100%);
+  border-radius:30px;
+  box-shadow:
+    0 24px 60px rgba(6,10,14,.55),
+    0 2px 0 rgba(255,255,255,.6) inset,
+    0 -3px 8px rgba(0,0,0,.14) inset;
+  overflow:hidden;
+}
+.device::after{
+  content:"";
+  position:absolute;
+  left:14px;right:14px;bottom:6px;height:1px;
+  background:rgba(0,0,0,.08);
+}
+
+/* 品牌压印 */
+.brand{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  padding:2px 6px 8px;
+  font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.22em;
+  color:#6d757e;
+  text-transform:uppercase;
+  flex:0 0 auto;
+}
+.brand b{
+  color:#565e67;
+  font-weight:700;
+}
+.brand span{letter-spacing:.14em;font-size:10px;color:#8b939c}
+
+/* ===== 屏幕 ===== */
+.screen{
+  position:relative;
+  flex:1 1 auto;
+  min-height:180px;
+  border-radius:8px;
+  background:var(--lcd);
+  border:6px solid #8d959d;
+  box-shadow:
+    0 0 0 1px #6f777f,
+    0 2px 6px rgba(0,0,0,.25) inset,
+    0 10px 24px rgba(20,25,30,.28);
+  overflow:hidden;
+  touch-action:none;
+}
+canvas{display:block;width:100%;height:100%}
+
+/* 液晶玻璃：扫描线 + 暗角 */
+.glass{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(to bottom,rgba(37,47,28,.055) 0 1px,rgba(37,47,28,0) 1px 3px);
+  box-shadow:inset 0 0 34px rgba(37,47,28,.20), inset 0 0 6px rgba(255,255,255,.18);
+  mix-blend-mode:multiply;
+  opacity:.85;
+}
+
+/* ===== 按键区 ===== */
+.pad{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 4px 2px;
+  gap:10px;
+}
+
+.dpad{
+  display:grid;
+  grid-template-columns:repeat(3,46px);
+  grid-template-rows:repeat(3,46px);
+  gap:5px;
+  touch-action:none;
+}
+.dpad .hub{
+  grid-area:2/2;
+  border-radius:8px;
+  background:radial-gradient(circle at 50% 35%,#3a424c,#2e353d);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+.key{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(180deg,var(--key-hi),var(--key));
+  color:var(--key-text);
+  border-radius:9px;
+  border:0;
+  box-shadow:
+    0 2px 0 var(--key-edge),
+    0 3px 8px rgba(0,0,0,.2),
+    inset 0 1px 0 rgba(255,255,255,.18);
+  font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  cursor:pointer;
+  transition:transform .06s linear,box-shadow .06s linear;
+  touch-action:none;
+}
+.key:active,.key[data-down="1"]{
+  transform:translateY(2px);
+  box-shadow:0 0 0 var(--key-edge),inset 0 1px 3px rgba(0,0,0,.35);
+}
+.key svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
+.dpad .up{grid-area:1/2}
+.dpad .left{grid-area:2/1}
+.dpad .right{grid-area:2/3}
+.dpad .down{grid-area:3/2}
+
+.rounds{display:flex;gap:12px}
+.round{
+  width:62px;height:62px;
+  border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;
+  background:linear-gradient(180deg,#d8dde2,#b3bac2);
+  color:#333b44;
+  border:0;
+  box-shadow:
+    0 3px 0 #8f979f,
+    0 5px 10px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.7);
+  font:600 11px/1.1 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  letter-spacing:.04em;
+  cursor:pointer;
+  transition:transform .06s linear,box-shadow .06s linear;
+  touch-action:none;
+}
+.round:active{
+  transform:translateY(2px);
+  box-shadow:0 1px 0 #8f979f,inset 0 1px 3px rgba(0,0,0,.25);
+}
+.round i{
+  width:9px;height:9px;border-radius:50%;
+  background:#3a444e;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
+}
+.round b{font-weight:700}
+
+.hint{
+  flex:0 0 auto;
+  text-align:center;
+  padding:8px 4px 0;
+  font-size:11px;
+  letter-spacing:.03em;
+  color:#717a84;
+}
+@media (max-width:360px){
+  .dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,42px)}
+  .round{width:56px;height:56px}
+}
+@media (min-height:820px){
+  .dpad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px)}
+  .round{width:68px;height:68px}
+}
+</style>
+</head>
+<body>
+<div class="device">
+  <div class="brand"><b>SNAKE</b><span>掌机复刻 · 1988</span></div>
+
+  <div class="screen" id="surface">
+    <canvas id="game"></canvas>
+    <div class="glass"></div>
+  </div>
+
+  <div class="pad">
+    <div class="dpad">
+      <button class="key up" data-dir="up" aria-label="上">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+      </button>
+      <button class="key left" data-dir="left" aria-label="左">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="hub" aria-hidden="true"></div>
+      <button class="key right" data-dir="right" aria-label="右">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l7 7-7 7"/></svg>
+      </button>
+      <button class="key down" data-dir="down" aria-label="下">
+        <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7 7 7-7"/></svg>
+      </button>
+    </div>
+
+    <div class="rounds">
+      <button class="round" id="btnPause"><i></i><b>暂停</b></button>
+      <button class="round" id="btnReset"><i></i><b>重开</b></button>
+    </div>
+  </div>
+
+  <div class="hint">滑动屏幕或用方向键转向 · 吃到红果变长，金果加分</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var COLS = 20, ROWS = 26;
+  var MONO = 'ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace';
+  var SANS = 'system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+
+  var cv = document.getElementById('game');
+  var ctx = cv.getContext('2d');
+  var surface = document.getElementById('surface');
+
+  var LCD = '#b5c88a';
+  var INK = '#252f1c';
+  var BERRY = '#bf4a2c';
+
+  var W = 1, H = 1, dpr = 1, cell = 16, ox = 0, oy = 0, hudH = 34;
+
+  var S = {
+    phase: 'title',
+    snake: [],
+    dir: { x: 1, y: 0 },
+    pending: null,
+    food: { x: 0, y: 0 },
+    bonus: null,
+    bonusLeft: 0,
+    score: 0,
+    eaten: 0,
+    tick: 0.13,
+    acc: 0,
+    best: 0,
+    flash: 0,
+    last: 0
+  };
+
+  try { S.best = parseInt(localStorage.getItem('snake.best') || '0', 10) || 0; } catch (e) { S.best = 0; }
+
+  /* ---------- 尺寸 ---------- */
+  function layout() {
+    cell = Math.min(W / COLS, (H - hudH) / ROWS);
+    ox = Math.floor((W - cell * COLS) / 2);
+    oy = hudH + Math.floor((H - hudH - cell * ROWS) / 2);
+  }
+
+  function resize() {
+    var r = surface.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width));
+    H = Math.max(1, Math.round(r.height));
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    hudH = Math.max(30, Math.min(44, Math.round(H * 0.062)));
+    layout();
+  }
+
+  /* ---------- 状态 ---------- */
+  function occupied(x, y) {
+    for (var i = 0; i < S.snake.length; i++) {
+      if (S.snake[i].x === x && S.snake[i].y === y) return true;
+    }
+    if (S.bonus && S.bonus.x === x && S.bonus.y === y) return true;
+    return false;
+  }
+
+  function pickCell(ignore) {
+    var x = 0, y = 0, guard = 0;
+    do {
+      x = Math.floor(Math.random() * COLS);
+      y = Math.floor(Math.random() * ROWS);
+      guard++;
+    } while (guard < 4000 && (occupied(x, y) || (ignore && ignore.x === x && ignore.y === y)));
+    return { x: x, y: y };
+  }
+
+  function reset() {
+    S.snake = [];
+    var hx = Math.floor(COLS / 2), hy = Math.floor(ROWS / 2);
+    for (var i = 0; i < 4; i++) S.snake.push({ x: hx - i, y: hy });
+    S.dir = { x: 1, y: 0 };
+    S.pending = null;
+    S.score = 0;
+    S.eaten = 0;
+    S.tick = 0.13;
+    S.acc = 0;
+    S.bonus = null;
+    S.bonusLeft = 0;
+    S.flash = 0;
+    S.food = pickCell(null);
+  }
+
+  function start() {
+    reset();
+    S.phase = 'play';
+    S.last = 0;
+  }
+
+  function setDir(x, y) {
+    if (S.phase !== 'play') return;
+    if (x === -S.dir.x && y === -S.dir.y) return;
+    S.pending = { x: x, y: y };
+  }
+
+  function buzz(ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
+  }
+
+  function die() {
+    S.phase = 'over';
+    S.flash = 1;
+    if (S.score > S.best) {
+      S.best = S.score;
+      try { localStorage.setItem('snake.best', String(S.best)); } catch (e) {}
+    }
+    buzz(70);
+  }
+
+  function step() {
+    if (S.pending) {
+      var p = S.pending;
+      if (!(p.x === -S.dir.x && p.y === -S.dir.y)) S.dir = p;
+      S.pending = null;
+    }
+
+    var head = S.snake[0];
+    var nx = head.x + S.dir.x, ny = head.y + S.dir.y;
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) { die(); return false; }
+
+    for (var i = 0; i < S.snake.length - 1; i++) {
+      if (S.snake[i].x === nx && S.snake[i].y === ny) { die(); return false; }
+    }
+
+    S.snake.unshift({ x: nx, y: ny });
+
+    var ate = false;
+    if (nx === S.food.x && ny === S.food.y) {
+      S.score += 10;
+      S.eaten += 1;
+      S.tick = Math.max(0.07, 0.132 - S.eaten * 0.005);
+      S.food = pickCell({ x: nx, y: ny });
+      if (S.eaten % 5 === 0 && !S.bonus) {
+        S.bonus = pickCell({ x: nx, y: ny });
+        S.bonusLeft = 7;
+      }
+      ate = true;
+      buzz(12);
+    } else if (S.bonus && nx === S.bonus.x && ny === S.bonus.y) {
+      S.score += 30;
+      S.bonus = null;
+      S.bonusLeft = 0;
+      ate = true;
+      buzz(26);
+    }
+
+    if (!ate) S.snake.pop();
+    return true;
+  }
+
+  function update(dt) {
+    if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 2.6);
+    if (S.phase !== 'play') return;
+
+    if (S.bonus) {
+      S.bonusLeft -= dt;
+      if (S.bonusLeft <= 0) { S.bonus = null; S.bonusLeft = 0; }
+    }
+
+    S.acc += dt;
+    var guard = 0;
+    while (S.acc >= S.tick && S.phase === 'play' && guard < 8) {
+      S.acc -= S.tick;
+      guard++;
+      if (!step()) break;
+    }
+    if (S.acc > S.tick * 3) S.acc = 0;
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawGrid() {
+    ctx.fillStyle = LCD;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = 'rgba(37,47,28,.13)';
+    var d = Math.max(1, Math.round(cell * 0.11));
+    for (var gx = 0; gx < COLS; gx++) {
+      for (var gy = 0; gy < ROWS; gy++) {
+        ctx.fillRect(Math.round(ox + gx * cell + cell / 2), Math.round(oy + gy * cell + cell / 2), d, d);
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(37,47,28,.20)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox - 0.5, oy - 0.5, cell * COLS + 1, cell * ROWS + 1);
+
+    // 屏幕外缘的余辉
+    ctx.fillStyle = 'rgba(143,166,107,.28)';
+    ctx.fillRect(0, H - 3, W, 3);
+  }
+
+  function drawBerry(p, isBonus) {
+    var cx = ox + p.x * cell + cell / 2;
+    var cy = oy + p.y * cell + cell / 2;
+    var r = cell * 0.3;
+    ctx.fillStyle = BERRY;
+    if (isBonus) {
+      var h = r * 1.5;
+      ctx.fillRect(cx - h / 2, cy - h / 2, h, h);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = Math.max(1, cell * 0.08);
+      ctx.strokeRect(cx - h / 2 - 2, cy - h / 2 - 2, h + 4, h + 4);
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawSnake() {
+    for (var i = S.snake.length - 1; i >= 0; i--) {
+      var seg = S.snake[i];
+      var pad = i === 0 ? 1 : 1.6;
+      ctx.fillStyle = i === 0 ? INK : 'rgba(37,47,28,' + (0.72 - Math.min(0.3, i * 0.007)) + ')';
+      ctx.fillRect(ox + seg.x * cell + pad, oy + seg.y * cell + pad, cell - pad * 2, cell - pad * 2);
+    }
+
+    // 头部眼睛
+    var h = S.snake[0];
+    if (!h) return;
+    var hx = ox + h.x * cell, hy = oy + h.y * cell;
+    var e = Math.max(2, cell * 0.15);
+    ctx.fillStyle = LCD;
+    if (S.dir.x !== 0) {
+      var ex = hx + (S.dir.x > 0 ? cell * 0.54 : cell * 0.28);
+      ctx.fillRect(ex, hy + cell * 0.24, e, e);
+      ctx.fillRect(ex, hy + cell * 0.58, e, e);
+    } else {
+      var ey = hy + (S.dir.y > 0 ? cell * 0.54 : cell * 0.28);
+      ctx.fillRect(hx + cell * 0.24, ey, e, e);
+      ctx.fillRect(hx + cell * 0.58, ey, e, e);
+    }
+  }
+
+  function drawHud() {
+    var fs = Math.max(11, Math.min(16, Math.round(H * 0.023)));
+    ctx.font = '600 ' + fs + 'px ' + MONO;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = INK;
+    var y = Math.round(hudH / 2) + 1;
+    ctx.textAlign = 'left';
+    ctx.fillText('分数 ' + S.score, 12, y);
+    ctx.textAlign = 'center';
+    ctx.fillText('最高 ' + S.best, W / 2, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('长度 ' + S.snake.length, W - 12, y);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(37,47,28,.18)';
+    ctx.fillRect(0, hudH - 1, W, 1);
+  }
+
+  function veil(alpha) {
+    ctx.fillStyle = 'rgba(181,200,138,' + alpha + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawTitle() {
+    veil(0.93);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    var t = Math.min(48, Math.round(W * 0.155));
+    ctx.fillStyle = INK;
+    ctx.font = '800 ' + t + 'px ' + MONO;
+    ctx.fillText('SNAKE', W / 2, H * 0.33);
+
+    ctx.font = '600 ' + Math.round(t * 0.42) + 'px ' + SANS;
+    ctx.fillText('贪吃蛇 · 掌机复刻', W / 2, H * 0.33 + t * 0.92);
+
+    if (Math.floor(performance.now() / 460) % 2 === 0) {
+      ctx.font = '700 ' + Math.round(t * 0.36) + 'px ' + SANS;
+      ctx.fillText('轻触屏幕开始', W / 2, H * 0.575);
+    }
+
+    ctx.fillStyle = 'rgba(37,47,28,.62)';
+    ctx.font = '500 ' + Math.round(t * 0.28) + 'px ' + SANS;
+    ctx.fillText('滑动转向 · 红果 +10 · 金果 +30', W / 2, H * 0.69);
+    ctx.fillText('撞墙或咬到自己就结束', W / 2, H * 0.69 + Math.round(t * 0.42));
+  }
+
+  function drawPause() {
+    veil(0.9);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = INK;
+    var t = Math.min(40, Math.round(W * 0.12));
+    ctx.font = '800 ' + t + 'px ' + SANS;
+    ctx.fillText('暂停', W / 2, H * 0.45);
+    ctx.font = '500 ' + Math.round(t * 0.42) + 'px ' + SANS;
+    ctx.fillStyle = 'rgba(37,47,28,.65)';
+    ctx.fillText('轻触屏幕继续', W / 2, H * 0.45 + t * 1.15);
+  }
+
+  function drawOver() {
+    veil(0.92);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var t = Math.min(34, Math.round(W * 0.098));
+
+    ctx.fillStyle = BERRY;
+    ctx.font = '800 ' + t + 'px ' + MONO;
+    ctx.fillText('GAME OVER', W / 2, H * 0.38);
+
+    ctx.fillStyle = INK;
+    ctx.font = '700 ' + Math.round(t * 0.56) + 'px ' + SANS;
+    ctx.fillText('得分 ' + S.score, W / 2, H * 0.38 + t * 1.35);
+    ctx.font = '500 ' + Math.round(t * 0.44) + 'px ' + SANS;
+    ctx.fillStyle = 'rgba(37,47,28,.66)';
+    ctx.fillText('最高 ' + S.best, W / 2, H * 0.38 + t * 1.95);
+
+    if (Math.floor(performance.now() / 460) % 2 === 0) {
+      ctx.fillStyle = INK;
+      ctx.font = '700 ' + Math.round(t * 0.46) + 'px ' + SANS;
+      ctx.fillText('轻触或按空格重开', W / 2, H * 0.38 + t * 2.9);
+    }
+  }
+
+  function draw() {
+    drawGrid();
+    if (S.phase !== 'title') {
+      if (S.bonus) {
+        var blink = S.bonusLeft < 3 ? (Math.floor(S.bonusLeft * 4) % 2 === 0) : true;
+        if (blink) drawBerry(S.bonus, true);
+      }
+      drawBerry(S.food, false);
+      drawSnake();
+    }
+    drawHud();
+
+    if (S.phase === 'title') drawTitle();
+    else if (S.phase === 'pause') drawPause();
+    else if (S.phase === 'over') drawOver();
+
+    if (S.flash > 0) {
+      ctx.fillStyle = 'rgba(191,74,44,' + (S.flash * 0.35) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function frame(ts) {
+    if (!S.last) S.last = ts;
+    var dt = (ts - S.last) / 1000;
+    S.last = ts;
+    if (dt > 0.12) dt = 0.12;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- 交互 ---------- */
+  function primary() {
+    if (S.phase === 'title' || S.phase === 'over') start();
+    else if (S.phase === 'pause') { S.phase = 'play'; S.last = 0; }
+  }
+
+  function togglePause() {
+    if (S.phase === 'play') S.phase = 'pause';
+    else if (S.phase === 'pause') { S.phase = 'play'; S.last = 0; }
+    else primary();
+  }
+
+  document.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { setDir(0, -1); e.preventDefault(); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') { setDir(0, 1); e.preventDefault(); }
+    else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { setDir(-1, 0); e.preventDefault(); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') { setDir(1, 0); e.preventDefault(); }
+    else if (k === ' ' || k === 'Enter') { primary(); e.preventDefault(); }
+    else if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); e.preventDefault(); }
+    else if (k === 'r' || k === 'R') { start(); e.preventDefault(); }
+  });
+
+  var touchStart = null, touchMoved = false, touchTime = 0, suppressClick = false;
+
+  surface.addEventListener('touchstart', function (e) {
+    var t = e.changedTouches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    touchMoved = false;
+    touchTime = Date.now();
+    e.preventDefault();
+  }, { passive: false });
+
+  surface.addEventListener('touchmove', function (e) {
+    if (!touchStart) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - touchStart.x;
+    var dy = t.clientY - touchStart.y;
+    if (dx * dx + dy * dy > 676) {
+      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
+      else setDir(0, dy > 0 ? 1 : -1);
+      touchStart = { x: t.clientX, y: t.clientY };
+      touchMoved = true;
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  surface.addEventListener('touchend', function (e) {
+    if (!touchMoved && Date.now() - touchTime < 280) primary();
+    touchStart = null;
+    suppressClick = true;
+    setTimeout(function () { suppressClick = false; }, 350);
+    e.preventDefault();
+  }, { passive: false });
+
+  surface.addEventListener('click', function (e) {
+    if (suppressClick) return;
+    primary();
+  });
+
+  var DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-dir]'), function (btn) {
+    var d = DIRS[btn.getAttribute('data-dir')];
+    btn.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      btn.setAttribute('data-down', '1');
+      setDir(d[0], d[1]);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+      btn.addEventListener(ev, function () { btn.removeAttribute('data-down'); });
+    });
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  });
+
+  document.getElementById('btnPause').addEventListener('click', function (e) {
+    e.preventDefault();
+    togglePause();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function (e) {
+    e.preventDefault();
+    start();
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && S.phase === 'play') S.phase = 'pause';
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
+
+  reset();
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
